@@ -1,0 +1,9 @@
+numpy
+matplotlib
+deap
+pandas
+seaborn
+tqdm
+scipy
+networkx
+pytest

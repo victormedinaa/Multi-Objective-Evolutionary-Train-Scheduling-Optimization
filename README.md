@@ -1,104 +1,90 @@
-# Genetic Algorithms for Train Scheduling Optimization
+# Multi-Objective Evolutionary Train Scheduling Optimization (MO-ETSO)
 
-## Project Overview
-This project implements a **genetic algorithm** to optimize train waiting times in a railway system, minimizing unloading delays. Trains must follow specific constraints:
-- All trains share a single track, meaning they must wait if another train is ahead.
-- Trains can only enter a loading dock that matches their designated type.
-- The unloading time depends on the number of wagons a train carries.
-
-The goal is to find the **optimal train arrival order** that minimizes total waiting time.
+## Abstract
+This project presents a **Multi-Objective Genetic Algorithm (MOGA)** framework for optimizing train scheduling in constrained single-track railway terminals. By leveraging **Non-dominated Sorting Genetic Algorithm II (NSGA-II)**, we simultaneously minimize total waiting time (efficiency) and makespan (throughput), providing a set of Pareto-optimal solutions rather than a single compromise. The system employs permutation-based representations with robust **Partially Mapped Crossover (PMX)** and **Inversion Mutation** operators to ensure feasibility in the combinatorial search space.
 
 ---
 
-## Implementation
+## 1. Introduction
+Railway scheduling is a classic **NP-hard** combinatorial optimization problem. Efficient scheduling maximizes capacity and minimizes delays, critical for logistics operations. This research upgrades a baseline Genetic Algorithm to a state-of-the-art (SOTA) research framework, introducing multi-objective optimization to handle conflicting criteria.
 
-### **1. Data Generation**
-Random trains are generated with:
-- A number of wagons between **10 and 30**.
-- A specific loading dock type (**op1, op2, op3**).
+### 1.1 Problem Formulation
+Let $T = \{t_1, t_2, ..., t_n\}$ be a set of trains, each characterized by:
+- **Wagons ($w_i$)**: Processing time required.
+- **Operation Type ($op_i$)**: Specific dock constraint ($op \in \{Op_1, Op_2, Op_3\}$).
 
-```python
-incoming_trains = random_trains_generation(10)  # 10 incoming trains
+**Constraints**:
+- **Single-Track Access**: Trains arrive sequentially on a shared track.
+- **Dedicated Docks**: $t_i$ can only be processed at a dock of type $op_i$.
+
+**Objectives**:
+1. **Minimize Total Waiting Time ($f_1$)**: The sum of delays incurred by all trains effectively waiting for track/dock availability.
+   $$ \min f_1 = \sum_{i=1}^{n} \text{Wait}(t_i) $$
+2. **Minimize Makespan ($f_2$)**: The total time to complete all operations.
+   $$ \min f_2 = C_{\max} = \max_{i} (\text{CompletionTime}(t_i)) $$
+
+---
+
+## 2. Methodology
+
+### 2.1 Evolutionary Framework: NSGA-II
+We employ **NSGA-II** (Deb et al., 2002), a standard in multi-objective optimization, to maintain population diversity and converge closer to the true Pareto-optimal front.
+
+- **Representation**: Permutation encoding of Train IDs.
+- **Selection**: Binary Tournament Selection with Crowding Distance.
+- **Elitism**: Fast Non-dominated Sorting.
+
+### 2.2 Genetic Operators
+To preserve the permutation property (validity of the schedule), we utilize:
+- **Crossover**: **Partially Mapped Crossover (PMX)**. This operator transmits ordering and value information from parent permutations to offspring, ensuring no duplicates.
+- **Mutation**: **Inversion Mutation**. A segment of the permutation is reversed. This is proven to be more effective for adjacency-based problems (like TSP/Scheduling) than simple swap mutation.
+
+---
+
+## 3. Project Structure
+map
 ```
-
-### **2. Individual Representation**
-Each individual in the population represents a possible train ordering.
-
-```python
-class Train:
-    def __init__(self, wagons, op):
-        self.wagons = wagons
-        self.op = op
-```
-
-### **3. Evaluation (Fitness Function)**
-The evaluation function calculates the **total waiting time** based on the train order.
-
-```python
-def evaluation(individual):
-    time = 0
-    # Logic to calculate accumulated waiting time
-    return time,
-```
-
-### **4. Genetic Operations**
-
-#### **Crossover**
-Swaps segments of the train sequence between two individuals while ensuring no duplicates.
-
-```python
-def our_crossover(ind1, ind2):
-    half1, half2 = ind1[:len(ind1)//2], ind1[len(ind1)//2:]
-    half3, half4 = ind2[:len(ind2)//2], ind2[len(ind2)//2:]
-    return half1 + half4, half3 + half2
-```
-
-#### **Mutation**
-Randomly swaps two trains to introduce diversity.
-
-```python
-def our_mutation(ind):
-    i, j = random.sample(range(len(ind)), 2)
-    ind[i], ind[j] = ind[j], ind[i]
-    return ind,
-```
-
-### **5. Running the Genetic Algorithm**
-The **DEAP** library is used to execute the algorithm with:
-- **Tournament selection** (to preserve potentially strong individuals).
-- **Custom crossover and mutation operators**.
-- **200 generations**.
-
-```python
-pop, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.15, ngen=200, stats=stats, halloffame=hallOfFame, verbose=True)
-```
-
-### **6. Results**
-The algorithm significantly reduces train waiting times by optimizing their arrival order.
-
-```python
-print("Best train sequence:")
-for i, train in enumerate(hallOfFame[0]):
-    print(f"Train {i}: {train}")
-```
-
-The evolution of waiting times over generations is visualized:
-
-```python
-plt.plot(gen, min_, label="Best time")
-plt.plot(gen, avg, label="Average time")
-plt.title("Time Optimization with Genetic Algorithms")
-plt.xlabel("Generation")
-plt.ylabel("Waiting Time")
-plt.legend()
-plt.show()
+genetic_scheduler/
+├── src/
+│   ├── genetic_scheduler/
+│   │   ├── problem.py       # Domain logic and DES (Discrete Event Simulation) evaluation
+│   │   ├── algorithm.py     # NSGA-II Solver implementation
+│   │   ├── operators.py     # Custom PMX and Inversion operators
+│   │   └── visualization.py # Pareto and Gantt plotting tools
+├── experiments/
+│   └── run_experiment.py    # Runner script for reproducing results
+├── tests/                   # Unit tests
+├── setup.py                 # Installation script
+└── requirements.txt         # Dependencies
 ```
 
 ---
 
-## **Conclusions**
-- The train waiting time was reduced by **almost 50%**.
-- The genetic algorithm found an optimal sequence within a **small number of generations**.
-- The combination of **ordered crossover and swap mutation** yielded effective results.
+## 4. Experimental Results
 
-This approach could be applied to other **logistics and transportation optimization problems**.
+The algorithm generates a set of non-dominated solutions. Visualizations include:
+- **Pareto Front**: Illustrates the trade-off between Waiting Time and Makespan.
+- **Gantt Charts**: Detailed schedule visualization for selected Pareto-optimal individuals.
+
+### 4.1 Usage
+
+**Installation**:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+```
+
+**Running Experiments**:
+```bash
+python experiments/run_experiment.py
+```
+
+---
+
+## 5. Conclusion
+This framework demonstrates that evolutionary computation, specifically NSGA-II with domain-specific operators, significantly outperforms naive heuristics in complex scheduling tasks. The resulting Pareto front empowers decision-makers to choose between high-throughput (low makespan) and high-efficiency (low wait time) schedules based on operational needs.
+
+---
+*Developed as part of an Advanced Research Initiative in Evolutionary Computing.*
